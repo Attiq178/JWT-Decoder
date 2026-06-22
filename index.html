@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>JWT Decoder</title>
+<title>JWT Decoder & Generator</title>
 <style>
   :root {
     --bg: #0f172a;
@@ -127,47 +127,135 @@
     font-size: 13px;
   }
   .hidden { display: none; }
+  /* Tabs */
+  .tabs { display: flex; gap: 4px; margin-bottom: 18px; border-bottom: 1px solid var(--border); }
+  .tab {
+    background: transparent;
+    color: var(--muted);
+    border: none;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .tab:hover { color: var(--text); filter: none; }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  /* Single-line inputs / selects matching the textarea look */
+  input[type="text"], select {
+    width: 100%;
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-family: "SF Mono", "Cascadia Code", Consolas, monospace;
+    font-size: 13px;
+  }
+  input[type="text"]:focus, select:focus { outline: none; border-color: var(--accent); }
+  textarea.short { min-height: 60px; }
+  .field { margin-top: 14px; }
+  .check { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text); margin-top: 14px; cursor: pointer; }
+  .check input { width: auto; }
   footer { margin-top: 28px; color: var(--muted); font-size: 11.5px; text-align: center; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>JWT Decoder</h1>
-  <p class="sub">Paste a token. If it is base64-wrapped, it is first base64-decoded to reveal the JWT; then the JWT is split and each part is base64url-decoded. Everything runs locally — nothing leaves your browser.</p>
+  <h1>JWT Decoder &amp; Generator</h1>
+  <p class="sub">Decode a token, or generate a signed one from an editable payload. HS256 signing runs entirely in your browser via the Web Crypto API — nothing leaves your machine.</p>
 
-  <label for="token">Token (raw JWT or base64-wrapped JWT)</label>
-  <textarea id="token" placeholder="Paste a JWT (eyJ...) or a base64 blob that decodes to a JWT" spellcheck="false"></textarea>
-
-  <div class="row">
-    <button id="decodeBtn">Decode</button>
-    <button class="ghost" id="clearBtn">Clear</button>
-    <button class="ghost" id="sampleBtn">Load sample</button>
+  <div class="tabs">
+    <button class="tab active" id="tabDecodeBtn" data-tab="decodeTab">Decode</button>
+    <button class="tab" id="tabGenerateBtn" data-tab="generateTab">Generate</button>
   </div>
 
-  <div id="error" class="error hidden"></div>
+  <!-- ===================== DECODE TAB ===================== -->
+  <div id="decodeTab">
+    <label for="token">Token (raw JWT or base64-wrapped JWT)</label>
+    <textarea id="token" placeholder="Paste a JWT (eyJ...) or a base64 blob that decodes to a JWT" spellcheck="false"></textarea>
 
-  <div id="output" class="hidden">
-    <div id="stage" class="stage hidden"></div>
-
-    <div class="panel">
-      <div class="phead"><span class="title raw">JWT (after base64 decode)</span><button class="copy" data-copy="jwtPre">Copy</button></div>
-      <pre id="jwtPre"></pre>
+    <div class="row">
+      <button id="decodeBtn">Decode</button>
+      <button class="ghost" id="clearBtn">Clear</button>
+      <button class="ghost" id="sampleBtn">Load sample</button>
     </div>
 
-    <div class="panel">
-      <div class="phead"><span class="title header">Header</span><button class="copy" data-copy="headerPre">Copy</button></div>
-      <pre id="headerPre"></pre>
+    <div id="error" class="error hidden"></div>
+
+    <div id="output" class="hidden">
+      <div id="stage" class="stage hidden"></div>
+
+      <div class="panel">
+        <div class="phead"><span class="title raw">JWT (after base64 decode)</span><button class="copy" data-copy="jwtPre">Copy</button></div>
+        <pre id="jwtPre"></pre>
+      </div>
+
+      <div class="panel">
+        <div class="phead"><span class="title header">Header</span><button class="copy" data-copy="headerPre">Copy</button></div>
+        <pre id="headerPre"></pre>
+      </div>
+
+      <div class="panel">
+        <div class="phead"><span class="title payload">Payload</span><button class="copy" data-copy="payloadPre">Copy</button></div>
+        <pre id="payloadPre"></pre>
+        <div id="claims" class="claims hidden"></div>
+      </div>
+
+      <div class="panel">
+        <div class="phead"><span class="title sig">Signature</span><button class="copy" data-copy="sigPre">Copy</button></div>
+        <pre id="sigPre"></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== GENERATE TAB ===================== -->
+  <div id="generateTab" class="hidden">
+    <div class="field">
+      <label for="genHeader">Header</label>
+      <textarea id="genHeader" class="short" spellcheck="false">{
+  "alg": "HS256",
+  "typ": "JWT"
+}</textarea>
     </div>
 
-    <div class="panel">
-      <div class="phead"><span class="title payload">Payload</span><button class="copy" data-copy="payloadPre">Copy</button></div>
-      <pre id="payloadPre"></pre>
-      <div id="claims" class="claims hidden"></div>
+    <div class="field">
+      <label for="genPayload">Payload (edit the values, then generate)</label>
+      <textarea id="genPayload" spellcheck="false"></textarea>
     </div>
 
-    <div class="panel">
-      <div class="phead"><span class="title sig">Signature</span><button class="copy" data-copy="sigPre">Copy</button></div>
-      <pre id="sigPre"></pre>
+    <div class="row">
+      <button class="ghost" id="setIatBtn">Set iat = now</button>
+      <button class="ghost" id="setExpBtn">Set exp = +5 min</button>
+      <button class="ghost" id="loadSamplePayloadBtn">Reset sample payload</button>
+    </div>
+
+    <div class="field">
+      <label for="genSecret">Secret (HS256 signing key)</label>
+      <input type="text" id="genSecret" placeholder="your-256-bit-secret" value="your-256-bit-secret" spellcheck="false">
+    </div>
+
+    <label class="check">
+      <input type="checkbox" id="genWrap"> Also base64-encode the whole token (wrapped form)
+    </label>
+
+    <div class="row">
+      <button id="generateBtn">Generate JWT</button>
+    </div>
+
+    <div id="genError" class="error hidden"></div>
+
+    <div id="genOutput" class="hidden">
+      <div class="panel">
+        <div class="phead"><span class="title sig">JWT</span><button class="copy" data-copy="genJwtPre">Copy</button></div>
+        <pre id="genJwtPre"></pre>
+      </div>
+
+      <div id="genWrapPanel" class="panel hidden">
+        <div class="phead"><span class="title raw">Base64-wrapped token</span><button class="copy" data-copy="genWrapPre">Copy</button></div>
+        <pre id="genWrapPre"></pre>
+      </div>
     </div>
   </div>
 
@@ -337,6 +425,142 @@
   tokenEl.addEventListener("input", function () {
     if (tokenEl.value.trim()) { decode(); }
     else { outputEl.classList.add("hidden"); errorEl.classList.add("hidden"); }
+  });
+
+  /* ===================== GENERATE ===================== */
+
+  var genHeaderEl = document.getElementById("genHeader");
+  var genPayloadEl = document.getElementById("genPayload");
+  var genSecretEl = document.getElementById("genSecret");
+  var genWrapEl = document.getElementById("genWrap");
+  var genErrorEl = document.getElementById("genError");
+  var genOutputEl = document.getElementById("genOutput");
+  var genJwtPre = document.getElementById("genJwtPre");
+  var genWrapPanel = document.getElementById("genWrapPanel");
+  var genWrapPre = document.getElementById("genWrapPre");
+
+  // UTF-8 string -> base64url. Inverse of b64ToUtf8().
+  function utf8ToB64url(str) {
+    var b64 = btoa(unescape(encodeURIComponent(str)));
+    return b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+
+  // ArrayBuffer -> base64url (used for the binary HMAC signature).
+  function bufToB64url(buf) {
+    var bytes = new Uint8Array(buf);
+    var binary = "";
+    for (var i = 0; i < bytes.length; i++) { binary += String.fromCharCode(bytes[i]); }
+    return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+
+  // HMAC-SHA256 sign -> base64url signature.
+  function signHS256(signingInput, secret) {
+    var enc = new TextEncoder();
+    return crypto.subtle.importKey(
+      "raw", enc.encode(secret),
+      { name: "HMAC", hash: "SHA-256" },
+      false, ["sign"]
+    ).then(function (key) {
+      return crypto.subtle.sign("HMAC", key, enc.encode(signingInput));
+    }).then(bufToB64url);
+  }
+
+  // Fresh sample payload matching the decoded staging token's shape.
+  function buildSamplePayload() {
+    var iat = Math.floor(Date.now() / 1000);
+    return {
+      id: "f03f50eb-2848-4ed4-bb58-6331f7e665c3",
+      sub: "ADAX-Lolli",
+      exp: iat + 300,
+      iat: iat,
+      iss: "https://clients.staging.lolli.au",
+      aud: "https://marketplace.adaxonline.com/Marketplace/GetPublishDeals"
+    };
+  }
+
+  function setSamplePayload() {
+    genPayloadEl.value = JSON.stringify(buildSamplePayload(), null, 2);
+  }
+
+  function showGenError(msg) {
+    genErrorEl.textContent = msg;
+    genErrorEl.classList.remove("hidden");
+    genOutputEl.classList.add("hidden");
+  }
+
+  // Edit a single numeric claim in the payload textarea, preserving the other values.
+  function patchPayloadClaim(key, value) {
+    var obj;
+    try { obj = JSON.parse(genPayloadEl.value); }
+    catch (e) { showGenError("Payload is not valid JSON — fix it before using the helper buttons."); return; }
+    obj[key] = value;
+    genPayloadEl.value = JSON.stringify(obj, null, 2);
+    genErrorEl.classList.add("hidden");
+  }
+
+  function generate() {
+    var headerObj, payloadObj;
+    try { headerObj = JSON.parse(genHeaderEl.value); }
+    catch (e) { showGenError("Header is not valid JSON: " + e.message); return; }
+    try { payloadObj = JSON.parse(genPayloadEl.value); }
+    catch (e) { showGenError("Payload is not valid JSON: " + e.message); return; }
+
+    var secret = genSecretEl.value;
+    if (!secret) { showGenError("Enter a secret to sign the token with (HS256)."); return; }
+
+    // Keep the output consistent — this tool only signs HS256.
+    if (headerObj.alg && headerObj.alg !== "HS256") {
+      headerObj.alg = "HS256";
+      genHeaderEl.value = JSON.stringify(headerObj, null, 2);
+    }
+
+    var signingInput = utf8ToB64url(JSON.stringify(headerObj)) + "." + utf8ToB64url(JSON.stringify(payloadObj));
+
+    signHS256(signingInput, secret).then(function (sig) {
+      var jwt = signingInput + "." + sig;
+      genJwtPre.textContent = jwt;
+
+      if (genWrapEl.checked) {
+        genWrapPre.textContent = btoa(jwt);
+        genWrapPanel.classList.remove("hidden");
+      } else {
+        genWrapPanel.classList.add("hidden");
+      }
+
+      genErrorEl.classList.add("hidden");
+      genOutputEl.classList.remove("hidden");
+    }).catch(function (e) {
+      showGenError("Signing failed: " + e.message);
+    });
+  }
+
+  document.getElementById("generateBtn").addEventListener("click", generate);
+  document.getElementById("loadSamplePayloadBtn").addEventListener("click", function () {
+    setSamplePayload();
+    genErrorEl.classList.add("hidden");
+  });
+  document.getElementById("setIatBtn").addEventListener("click", function () {
+    patchPayloadClaim("iat", Math.floor(Date.now() / 1000));
+  });
+  document.getElementById("setExpBtn").addEventListener("click", function () {
+    patchPayloadClaim("exp", Math.floor(Date.now() / 1000) + 300);
+  });
+  genWrapEl.addEventListener("change", function () {
+    // Re-run only if we already have output, so the wrapped panel toggles live.
+    if (!genOutputEl.classList.contains("hidden")) { generate(); }
+  });
+
+  setSamplePayload(); // prepopulate on load
+
+  /* ===================== TABS ===================== */
+
+  document.querySelectorAll(".tab").forEach(function (tabBtn) {
+    tabBtn.addEventListener("click", function () {
+      document.querySelectorAll(".tab").forEach(function (b) { b.classList.remove("active"); });
+      tabBtn.classList.add("active");
+      document.getElementById("decodeTab").classList.toggle("hidden", tabBtn.dataset.tab !== "decodeTab");
+      document.getElementById("generateTab").classList.toggle("hidden", tabBtn.dataset.tab !== "generateTab");
+    });
   });
 
   function tokenFromUrl() {
