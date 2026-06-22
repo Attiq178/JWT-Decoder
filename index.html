@@ -260,7 +260,7 @@
   </div>
 
   <footer>
-    Single-file offline tool. Tip: pass a token via URL — <code>?token=&lt;value&gt;</code><br>
+    Browser-only — no servers and no API calls. Your tokens never leave this page.<br>
     &copy; 2026 Attiq178. All rights reserved.
   </footer>
 </div>
@@ -270,7 +270,7 @@
   "use strict";
 
   // A base64-wrapped JWT: base64( "header.payload.signature" ).
-  var SAMPLE = "ZXlKaGJHY2lPaUpJVXpJMU5pSjkuZXlKcFpDSTZJbVl3TTJZMU1HVmlMVEk0TkRndE5HVmtOQzFpWWpVNExUWXpNekZtTjJVMk5qVmpNeUlzSW5OMVlpSTZJa0ZFUVZndFRHOXNiR2tpTENKbGVIQWlPakUzT0RFMk9USTVOVEVzSW1saGRDSTZNVGM0TVRZNU1qWTFNU3dpYVhOeklqb2lhSFIwY0hNNkx5OWpiR2xsYm5SekxuTjBZV2RwYm1jdWJHOXNiR2t1WVhVaUxDSmhkV1FpT2lKb2RIUndjem92TDIxaGNtdGxkSEJzWVdObExtRmtZWGh2Ym14cGJtVXVZMjl0TDAxaGNtdGxkSEJzWVdObEwwZGxkRkIxWW14cGMyaEVaV0ZzY3lKOS5tYnFlcDNGeVdlM1prOUsybkV2ZkV3NkdTVWhHcHhRQUtsc2QxcnQ4bG1B";
+  var SAMPLE = "ZXlKaGJHY2lPaUpJVXpJMU5pSXNJblI1Y0NJNklrcFhWQ0o5LmV5SmxiV0ZwYkNJNkluVnpaWEpBWlhoaGJYQnNaUzVqYjIwaUxDSnBZWFFpT2pFM01EQXdNREF3TURBc0ltVjRjQ0k2TWpBd01EQXdNREF3TUgwLmNIdU9faVpDd1BYdWtlTlZTMDFBREZTdEl3UC1TNlc5WFZhblB5VWpGQjg=";
 
   var tokenEl = document.getElementById("token");
   var errorEl = document.getElementById("error");
@@ -468,16 +468,13 @@
     }).then(bufToB64url);
   }
 
-  // Fresh sample payload matching the decoded staging token's shape.
+  // Fresh, minimal sample payload: a user identifier plus start (iat) and expiry (exp).
   function buildSamplePayload() {
     var iat = Math.floor(Date.now() / 1000);
     return {
-      id: "f03f50eb-2848-4ed4-bb58-6331f7e665c3",
-      sub: "ADAX-Lolli",
-      exp: iat + 300,
+      email: "user@example.com",
       iat: iat,
-      iss: "https://clients.staging.lolli.au",
-      aud: "https://marketplace.adaxonline.com/Marketplace/GetPublishDeals"
+      exp: iat + 300
     };
   }
 
